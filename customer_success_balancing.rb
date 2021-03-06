@@ -10,38 +10,37 @@ class CustomerSuccessBalancing
 
   # Returns the id of the CustomerSuccess with the most customers
   def execute
-    max = 0
-    max_id = nil
-    count = 0
-    values = []
+    matches = {} #um hash para armazenar os matches entre os customers e css
+    prevScore = 0 #uma variável auxiliar para o controle do score
 
-    until @customer_success_away.any?
-      @customer_success_away.each { |id_away|
-        @customer_success.each { |cs|
-          if cs[:value] == id_away then
-            @customer_success.delete(cs[:id]) 
-          end
-        }
-      }
-    end
-
-    
-    @customer_success.each { |cs| 
-      
-      @customers.each { |customer| 
-        count++ if (customer[:score] <= cs[:score])
-      }
-    
-      if count > max 
-        max_id = cs[:id]
-        max = count 
-      elsif count == max
-        max_id = 0
+    #deleta os css que estão fora
+    custSuc = @customer_success.reject { |css| @customer_success_away.include?(css[:id]) }
+    #ordena os css por score
+    custSuc.sort_by! { |css| css[:score] }
+    #ordena os customers pelo score
+    customers = @customers.sort_by { |cust| cust[:score] }
+    #itera pelos css
+    custSuc.each do |css|
+      #armazena os customers que os css pode atender (<= ao seu score)
+      can_match = customers.select do |customer| 
+        customer[:score] <= css[:score] and customer[:score] > prevScore
       end
-    
-    }
-
-    return max_id
+      #armazena o score atual na variável auxiliar
+      prevScore = css[:score]
+      #score = quantidade de customers que podem ser atendidos
+      score = can_match.length
+      #se o hash de maps não conter conter a quantidade
+      if !matches.has_key?(score) then
+        #cria uma chave com a quantidade
+        matches[score] = []
+      end
+      #o hash matches na posição da quantidade de customers recebe o id do css
+      matches[score].push(css[:id])
+    end
+    #o valor máximo será o máximo do array de keys (quantidades de customers)
+    max = matches.keys.max
+    #operador ternário -> se tiver mais de um max devolve 0, senão devolve o max
+    matches[max].length > 1 ? 0 : matches[max][0]
   end
 end
 
